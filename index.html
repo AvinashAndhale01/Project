@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Modern Video Player</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://vjs.zencdn.net/7.15.0/video-js.css" rel="stylesheet" />
+    <script src="https://vjs.zencdn.net/7.15.0/video.js"></script>
+    <style>
+      /* Custom CSS for the Video Player */
+      .video-js {
+        width: 100%;
+        height: 100%;
+        background-color: #000;
+      }
+      .vjs-big-play-button {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 4em;
+        opacity: 0.8;
+        transition: all 0.3s ease;
+      }
+      .vjs-big-play-button:hover {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+      .vjs-control-bar {
+        background-color: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .vjs-mouse-over .vjs-control-bar,
+      .vjs-playing .vjs-control-bar {
+        opacity: 1;
+      }
+      .vjs-play-pause-control,
+      .vjs-volume-control,
+      .vjs-fullscreen-control,
+      .vjs-current-time,
+      .vjs-duration,
+      .vjs-time-separator,
+      .vjs-playback-rate {
+        color: #fff;
+      }
+      .vjs-progress-holder {
+        flex: 1;
+        margin: 0 10px;
+        display: flex;
+        align-items: center;
+        height: 10px;
+      }
+      .vjs-progress-holder .vjs-play-progress {
+        background-color: #f59e0b; /* Tailwind amber-500 */
+      }
+      .vjs-progress-holder .vjs-load-progress {
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+      .vjs-volume-level {
+        background-color: #f59e0b; /* Tailwind amber-500 */
+      }
+
+      /* Fullscreen Styles */
+      .vjs-fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1000;
+      }
+
+      /* Custom Touch Controls */
+      .touch-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+        display: flex;
+      }
+      .left-overlay {
+        flex: 1;
+      }
+      .right-overlay {
+        flex: 1;
+      }
+      #brightness-level,
+      #volume-level {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 11;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-white font-roboto">
+    <div class="container mx-auto px-4 py-8">
+      <h1 class="text-3xl font-bold mb-6 text-center text-amber-500">
+        Modern Video Player
+      </h1>
+
+      <div
+        id="shortlink-section"
+        class="mb-8 p-6 bg-gray-800 rounded-lg shadow-md"
+      >
+        <h2 class="text-xl font-semibold mb-4 text-gray-300">
+          Shorten Your Streaming Link
+        </h2>
+        <div class="flex space-x-4">
+          <input
+            type="text"
+            id="shortlink-input"
+            placeholder="Enter your streaming link"
+            class="flex-grow px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+          />
+          <button
+            id="shortlink-button"
+            class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-opacity-50"
+          >
+            Shorten
+          </button>
+        </div>
+        <div
+          id="shortlink-result"
+          class="mt-4 text-yellow-300 font-mono bg-gray-900 p-2 rounded-md overflow-x-auto"
+        ></div>
+      </div>
+
+      <div
+        id="play-video-section"
+        class="mb-8 p-6 bg-gray-800 rounded-lg shadow-md"
+      >
+        <h2 class="text-xl font-semibold mb-4 text-gray-300">
+          Play Video from URL
+        </h2>
+        <div class="flex space-x-4">
+          <input
+            type="text"
+            id="play-url-input"
+            placeholder="Enter video URL"
+            class="flex-grow px-4 py-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+          />
+          <button
+            id="play-video-button"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+          >
+            Play Video
+          </button>
+        </div>
+      </div>
+
+      <div
+        id="video-player-container"
+        class="w-full relative rounded-lg overflow-hidden shadow-xl"
+        style="display: none"
+      >
+        <video
+          id="my-video"
+          class="video-js vjs-default-skin"
+          controls
+          preload="metadata"
+        >
+          <source src="" type="video/mp4" />
+          <track
+            id="subtitle-track"
+            kind="subtitles"
+            label="English"
+            srclang="en"
+            src=""
+            default
+          />
+          <p class="vjs-no-js">
+            To view this video please enable JavaScript, and consider upgrading
+            to a web browser that
+            <a href="https://videojs.com/html5-video-support/" target="_blank"
+              >supports HTML5 video</a
+            >
+          </p>
+        </video>
+        <div class="touch-overlay">
+          <div class="left-overlay"></div>
+          <div class="right-overlay"></div>
+          <div id="brightness-level">Brightness: 50%</div>
+          <div id="volume-level">Volume: 100%</div>
+        </div>
+      </div>
+
+      <div
+        id="error-message"
+        class="mt-8 p-4 bg-red-800 text-red-200 rounded-md border border-red-600"
+        style="display: none"
+      >
+        <h2 class="text-lg font-semibold mb-2">Error</h2>
+        <p id="error-text"></p>
+        <a
+          href="/"
+          class="inline-block mt-4 text-blue-400 hover:text-blue-300 underline"
+          >Go to Homepage</a
+        >
+      </div>
+    </div>
+
+    <script>
+      // Get references to DOM elements
+      const shortlinkInput = document.getElementById("shortlink-input");
+      const shortlinkButton = document.getElementById("shortlink-button");
+      const shortlinkResult = document.getElementById("shortlink-result");
+      const playUrlInput = document.getElementById("play-url-input");
+      const playVideoButton = document.getElementById("play-video-button");
+      const videoPlayerContainer = document.getElementById(
+        "video-player-container"
+      );
+      const videoPlayer = document.getElementById("my-video");
+      const errorMessageContainer = document.getElementById("error-message");
+      const errorText = document.getElementById("error-text");
+      const subtitleTrack = document.getElementById("subtitle-track");
+
+      const leftOverlay = document.querySelector(".left-overlay");
+      const rightOverlay = document.querySelector(".right-overlay");
+      const brightnessLevelDisplay =
+        document.getElementById("brightness-level");
+      const volumeLevelDisplay = document.getElementById("volume-level");
+
+      let player;
+      let isFullscreen = false;
+      let initialTouchY = 0;
+      let initialVolume = 1;
+      let initialBrightness = 50; // Initial brightness level
+      const MAX_BRIGHTNESS = 100;
+      const MIN_BRIGHTNESS = 0;
+
+      // Function to display error message
+      function showError(message) {
+        errorMessageContainer.style.display = "block";
+        errorText.textContent = message;
+        videoPlayerContainer.style.display = "none";
+      }
+
+      // Function to hide error message
+      function hideError() {
+        errorMessageContainer.style.display = "none";
+      }
+
+      // Function to initialize the video player
+      function initVideoPlayer(videoUrl, subtitleUrl) {
+        hideError();
+        videoPlayerContainer.style.display = "block";
+        if (player) {
+          player.dispose();
+        }
+
+        player = videojs(videoPlayer, {
+          controls: true,
+          preload: "metadata",
+          autoplay: true, // You can change this to false if you don't want autoplay
+        });
+
+        player.src({ src: videoUrl, type: "video/mp4" });
+
+        if (subtitleUrl) {
+          subtitleTrack.src = subtitleUrl;
+          player.addRemoteTextTrack(
+            {
+              kind: "subtitles",
+              label: "English",
+              language: "en",
+              url: subtitleUrl,
+            },
+            false
+          ); // false for not default
+        }
+        player.ready(() => {
+          // Add custom CSS class for styling
+          player.addClass("custom-video-player");
+          // Play the video automatically (if autoplay is set to true)
+          // player.play();
+        });
+
+        // Add event listener for fullscreen change
+        player.on("fullscreenchange", () => {
+          isFullscreen = player.isFullscreen();
+        });
+
+        // Touch events for brightness and volume control
+        leftOverlay.addEventListener("touchstart", handleTouchStart);
+        leftOverlay.addEventListener("touchmove", handleBrightnessChange);
+        leftOverlay.addEventListener("touchend", handleTouchEnd);
+
+        rightOverlay.addEventListener("touchstart", handleTouchStart);
+        rightOverlay.addEventListener("touchmove", handleVolumeChange);
+        rightOverlay.addEventListener("touchend", handleTouchEnd);
+      }
+
+      function handleTouchStart(e) {
+        initialTouchY = e.touches[0].clientY;
+        if (this === rightOverlay) {
+          initialVolume = player.volume();
+        } else {
+          initialBrightness = getBrightness();
+        }
+      }
+
+      function handleTouchEnd() {
+        brightnessLevelDisplay.style.opacity = 0;
+        volumeLevelDisplay.style.opacity = 0;
+      }
+
+      function handleVolumeChange(e) {
+        e.preventDefault();
+        const touchY = e.touches[0].clientY;
+        const deltaY = initialTouchY - touchY;
+        const sensitivity = 0.005; // Adjust sensitivity as needed
+        let newVolume = initialVolume + deltaY * sensitivity;
+        newVolume = Math.max(0, Math.min(1, newVolume)); // Clamp between 0 and 1
+        player.volume(newVolume);
+        volumeLevelDisplay.textContent = `Volume: ${Math.round(
+          newVolume * 100
+        )}%`;
+        volumeLevelDisplay.style.opacity = 1;
+      }
+
+      function handleBrightnessChange(e) {
+        e.preventDefault();
+        const touchY = e.touches[0].clientY;
+        const deltaY = initialTouchY - touchY;
+        const sensitivity = 0.1; // Adjust sensitivity as needed
+        let newBrightness = initialBrightness + deltaY * sensitivity;
+        newBrightness = Math.max(
+          MIN_BRIGHTNESS,
+          Math.min(MAX_BRIGHTNESS, newBrightness)
+        ); // Clamp
+        setBrightness(newBrightness);
+        brightnessLevelDisplay.textContent = `Brightness: ${Math.round(
+          newBrightness
+        )}%`;
+        brightnessLevelDisplay.style.opacity = 1;
+      }
+
+      // Get and Set Brightness functions
+      function getBrightness() {
+        if ("brightness" in document.body.style) {
+          return parseFloat(document.body.style.brightness) * 100 || 100;
+        } else {
+          return 100; // Default brightness
+        }
+      }
+
+      function setBrightness(level) {
+        if ("brightness" in document.body.style) {
+          document.body.style.brightness = `${level / 100}`;
+        } else {
+          // Fallback for browsers that don't support CSS brightness
+          // You might need a library or other method to adjust screen brightness
+          console.warn("Brightness control is not supported in this browser.");
+        }
+      }
+
+      // Event listener for shortlink button
+      shortlinkButton.addEventListener("click", () => {
+        const link = shortlinkInput.value.trim();
+        if (link) {
+          // In a real application, you would send this link to a server
+          // to generate a short link.  For this example, we'll just
+          // simulate a short link.
+          const shortLink = `short.url/${Math.random()
+            .toString(36)
+            .substring(2, 9)}`;
+          shortlinkResult.textContent = `Shortened URL: ${shortLink}`;
+          // You could then use this shortLink in your application.
+          console.log("Shortened link:", shortLink);
+        } else {
+          shortlinkResult.textContent = "Please enter a link to shorten.";
+        }
+      });
+
+      // Event listener for play video button
+      playVideoButton.addEventListener("click", () => {
+        const videoUrl = playUrlInput.value.trim();
+        if (videoUrl) {
+          // Basic URL validation
+          try {
+            new URL(videoUrl);
+            // In a real application, you might want to check if the URL is actually a video file.
+            initVideoPlayer(videoUrl);
+          } catch (_) {
+            showError("Invalid URL. Please enter a valid video URL.");
+          }
+        } else {
+          showError("Please enter a video URL to play.");
+        }
+      });
+
+      // Check for video URL in query parameters on page load
+      window.addEventListener("load", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoUrl = urlParams.get("videoUrl");
+        const subtitleUrl = urlParams.get("subtitleUrl"); // Get subtitle URL
+
+        if (videoUrl) {
+          try {
+            new URL(videoUrl);
+            initVideoPlayer(videoUrl, subtitleUrl); // Pass subtitle URL
+          } catch (_) {
+            showError("Invalid video URL provided in the query string.");
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
